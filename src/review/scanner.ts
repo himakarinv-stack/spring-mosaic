@@ -11,24 +11,19 @@ export function scanSource(source: string, filePath: string): Violation[] {
   const isJava = lowerPath.endsWith(".java") || lowerPath.endsWith(".kt");
   if (!isJava) return violations;
 
-  const lines = source.split(/\r?\n/);
-
   const add = (v: Violation) => violations.push(v);
 
-  if (/@RestController[\s\S]*?@Autowired\s+(?!private\s+final)/.test(source) ||
-      (/@RestController/.test(source) && /@Autowired\s+(public\s+)?(?!.*final)/.test(source) && !/constructor/i.test(source))) {
-    // field injection heuristic
-  }
-
-  if (/@Autowired\s+(private|protected|public)?\s*(?!final)/.test(source) && !/requiredArgsConstructor|AllArgsConstructor/i.test(source)) {
-    if (/@Autowired\s*\n?\s*(private|protected)\s+(?!final)/.test(source) || /@Autowired\s+(private|protected)\s+\w+/.test(source)) {
-      add({
-        severity: "major",
-        rule: "prefer-constructor-injection",
-        message: "Field @Autowired detected — prefer constructor injection.",
-        hint: "Use a final field + constructor (or @RequiredArgsConstructor).",
-      });
-    }
+  if (
+    (/@Autowired\s*\n?\s*(private|protected)\s+(?!final)/.test(source) ||
+      /@Autowired\s+(private|protected)\s+\w+/.test(source)) &&
+    !/RequiredArgsConstructor|AllArgsConstructor/i.test(source)
+  ) {
+    add({
+      severity: "major",
+      rule: "prefer-constructor-injection",
+      message: "Field @Autowired detected — prefer constructor injection.",
+      hint: "Use a final field + constructor (or @RequiredArgsConstructor).",
+    });
   }
 
   if (/System\.out\.print/.test(source)) {
@@ -39,7 +34,10 @@ export function scanSource(source: string, filePath: string): Violation[] {
     });
   }
 
-  if (/catch\s*\([^)]+\)\s*\{\s*\}/.test(source) || /catch\s*\([^)]+\)\s*\{\s*\/\/.*\n\s*\}/.test(source)) {
+  if (
+    /catch\s*\([^)]+\)\s*\{\s*\}/.test(source) ||
+    /catch\s*\([^)]+\)\s*\{\s*\/\/.*\n\s*\}/.test(source)
+  ) {
     add({
       severity: "major",
       rule: "empty-catch",
@@ -55,7 +53,10 @@ export function scanSource(source: string, filePath: string): Violation[] {
     });
   }
 
-  if (/password\s*=\s*["'][^"']+["']/i.test(source) || /api[_-]?key\s*=\s*["'][^"']+["']/i.test(source)) {
+  if (
+    /password\s*=\s*["'][^"']+["']/i.test(source) ||
+    /api[_-]?key\s*=\s*["'][^"']+["']/i.test(source)
+  ) {
     add({
       severity: "blocker",
       rule: "no-hardcoded-secrets",
@@ -114,8 +115,17 @@ export function scanSource(source: string, filePath: string): Violation[] {
     });
   }
 
-  // unused lines var kept for future line-level reporting
-  void lines;
+  if (
+    /@RestController/.test(source) &&
+    /@Entity\b/.test(source) &&
+    /public\s+\w+Entity\b/.test(source)
+  ) {
+    add({
+      severity: "major",
+      rule: "entity-in-controller-api",
+      message: "Controller appears to expose entity types — prefer DTOs.",
+    });
+  }
 
   return violations;
 }
@@ -143,10 +153,11 @@ export function reviewPrDiff(changedFiles: string[], extensions: string[]): stri
     extensions.map((e) => `\`${e || "(none)"}\``).join(", ") || "(none)",
     ``,
     `## Suggested steps`,
-    `1. Call \`get_pr_review_brief\` then \`get_review_sections_for_diff\` with the extensions above.`,
-    `2. For each \`.java\` / \`.kt\` file, call \`scan_violations\` with path + source.`,
+    `1. Call \`audit_changed_files\` with the same file list (reads workspace or pass fileContents).`,
+    `2. Call \`get_pr_review_brief\` then \`get_review_sections_for_diff\` with the extensions above.`,
     `3. Call \`review_architecture\` for package / layer boundary checks.`,
     `4. Write findings using \`review-format\` severities (blocker / major / minor / info).`,
+    `5. Give actionable feedback to the author — what to change and why (best practices).`,
   ].join("\n");
 }
 
@@ -155,6 +166,7 @@ export function reviewArchitectureNotes(changedFiles: string[]): string {
   const services = changedFiles.filter((f) => /service/i.test(f));
   const repos = changedFiles.filter((f) => /repository|repo/i.test(f));
   const entities = changedFiles.filter((f) => /entity|model|domain/i.test(f));
+  const sql = changedFiles.filter((f) => /\.(sql)$/i.test(f) || /flyway|liquibase/i.test(f));
 
   return [
     `# Architecture checklist`,
@@ -163,6 +175,7 @@ export function reviewArchitectureNotes(changedFiles: string[]): string {
     `- Services touched: ${services.length ? services.join(", ") : "none"}`,
     `- Repositories touched: ${repos.length ? repos.join(", ") : "none"}`,
     `- Entities / domain touched: ${entities.length ? entities.join(", ") : "none"}`,
+    `- Migrations / SQL touched: ${sql.length ? sql.join(", ") : "none"}`,
     ``,
     `## Verify`,
     `- Controllers depend on services (not repositories / EntityManager).`,
@@ -170,5 +183,6 @@ export function reviewArchitectureNotes(changedFiles: string[]): string {
     `- Entities are not exposed as API response bodies (use DTOs).`,
     `- Package boundaries stay unidirectional (api → application → domain → infra).`,
     `- New modules follow scaffolding conventions (feature package or layered package — stay consistent).`,
+    `- Migration PRs include indexes for new filter/join columns (postgresql guide).`,
   ].join("\n");
 }

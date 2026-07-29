@@ -1,7 +1,7 @@
 {
   "name": "@himakarinv-stack/spring-mosaic",
-  "version": "0.1.0",
-  "description": "MCP server for Java / Spring Boot architecture, code quality, and API review — sibling to ai-mosaic.",
+  "version": "0.2.0",
+  "description": "MCP server that reviews SoftTech Java/Spring Boot repos for architecture and best-practice compliance — sibling to ai-mosaic.",
   "type": "module",
   "license": "MIT",
   "author": "Himakar Reddy <himakarinv@gmail.com>",
@@ -16,14 +16,19 @@
     "templates",
     "scripts/setup.mjs",
     "scripts/copy-standards.mjs",
+    "scripts/check-branch-name.mjs",
     "README.md",
     "LICENSE",
-    "PUBLISH.md"
+    "PUBLISH.md",
+    "CONTRIBUTING.md"
   ],
   "scripts": {
     "build": "tsc && node scripts/copy-standards.mjs",
     "start": "node dist/index.js",
     "dev": "tsc --watch",
+    "prepare": "husky",
+    "lint:commit": "commitlint --last --verbose",
+    "lint:branch": "node scripts/check-branch-name.mjs",
     "prepublishOnly": "npm run build"
   },
   "dependencies": {
@@ -31,7 +36,10 @@
     "zod": "^3.24.2"
   },
   "devDependencies": {
+    "@commitlint/cli": "^19.8.1",
+    "@commitlint/config-conventional": "^19.8.1",
     "@types/node": "^22.13.10",
+    "husky": "^9.1.7",
     "typescript": "^5.8.2"
   },
   "engines": {

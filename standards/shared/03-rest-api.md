@@ -16,6 +16,11 @@
 - Pagination for list endpoints (`Pageable` or explicit cursor).
 - Idempotent PUT/DELETE where applicable.
 
+## Errors
+- Centralize exception handling with `@ControllerAdvice` / `@RestControllerAdvice`.
+- Prefer Boot 3 `ProblemDetail` (or a single consistent error DTO) — no ad-hoc `Map` error bodies per controller.
+- Map domain failures to correct HTTP status; never return 200 with an error payload.
+
 ## OpenAPI
 - Document public APIs (springdoc or equivalent).
 - Keep examples and error responses accurate when contracts change.

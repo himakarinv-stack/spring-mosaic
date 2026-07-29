@@ -4,9 +4,11 @@ import type { SpringProfile } from "../context/spring-context.js";
 
 export type QualityDomain =
   | "architecture"
+  | "java-language"
   | "spring-boot"
   | "rest-api"
   | "data-jpa"
+  | "postgresql"
   | "security"
   | "testing"
   | "performance"
@@ -18,9 +20,11 @@ export type QualityDomain =
 
 const SHARED_FILES: Record<QualityDomain, string | null> = {
   architecture: "shared/01-architecture.md",
+  "java-language": "shared/02-java-language.md",
   "spring-boot": null,
   "rest-api": "shared/03-rest-api.md",
   "data-jpa": "shared/04-data-jpa.md",
+  postgresql: "shared/13-postgresql.md",
   security: "shared/05-security.md",
   testing: "shared/06-testing.md",
   performance: "shared/07-performance.md",
@@ -38,9 +42,11 @@ const PROFILE_BOOT: Record<SpringProfile, string> = {
 
 export const DOMAIN_SUMMARIES: Record<QualityDomain, string> = {
   architecture: "Layering, package boundaries, hexagonal / clean structure",
+  "java-language": "Naming, nullability, exceptions, language-level practices",
   "spring-boot": "Boot version profile — config, starters, Jakarta vs javax",
-  "rest-api": "Controllers, DTOs, validation, error handling, OpenAPI",
+  "rest-api": "Controllers, DTOs, validation, ControllerAdvice, OpenAPI",
   "data-jpa": "Entities, repositories, transactions, N+1, migrations",
+  postgresql: "Schema naming, indexes, Flyway/Liquibase, HikariCP",
   security: "AuthN/Z, secrets, input validation, OWASP basics",
   testing: "Unit, slice, integration tests; Testcontainers",
   performance: "Caching, pagination, async, connection pools",
@@ -48,7 +54,7 @@ export const DOMAIN_SUMMARIES: Record<QualityDomain, string> = {
   "review-format": "PR review output structure and severity",
   scaffolding: "Feature / module generation conventions",
   modernization: "Boot 2→3, Java LTS upgrades, dependency hygiene",
-  "git-conventions": "Branch, commit, and PR naming",
+  "git-conventions": "Branch, commit, and PR naming (org-aligned)",
 };
 
 function readFile(standardsDir: string, rel: string): string {
@@ -88,6 +94,7 @@ export function domainsForExtensions(extensions: string[]): QualityDomain[] {
 
   if (ext.some((e) => [".java", ".kt"].includes(e))) {
     domains.add("architecture");
+    domains.add("java-language");
     domains.add("spring-boot");
     domains.add("rest-api");
     domains.add("data-jpa");
@@ -95,9 +102,14 @@ export function domainsForExtensions(extensions: string[]): QualityDomain[] {
     domains.add("testing");
     domains.add("performance");
   }
+  if (ext.some((e) => [".sql"].includes(e) || e.includes("flyway") || e.includes("liquibase"))) {
+    domains.add("postgresql");
+    domains.add("data-jpa");
+  }
   if (ext.some((e) => [".yml", ".yaml", ".properties", ".xml", ".gradle", ".kts"].includes(e))) {
     domains.add("spring-boot");
     domains.add("security");
+    domains.add("postgresql");
     domains.add("modernization");
   }
   if (ext.some((e) => e.includes("test") || e.includes("IT"))) {
@@ -125,13 +137,19 @@ export function explainPattern(
   const t = topic.toLowerCase();
   const map: Array<{ keys: string[]; domain: QualityDomain }> = [
     { keys: ["layer", "hexagonal", "clean", "package", "architecture"], domain: "architecture" },
+    { keys: ["java", "naming", "optional", "record"], domain: "java-language" },
     { keys: ["boot", "starter", "jakarta", "actuator", "config"], domain: "spring-boot" },
-    { keys: ["rest", "controller", "dto", "api", "openapi", "validation"], domain: "rest-api" },
+    {
+      keys: ["rest", "controller", "dto", "api", "openapi", "validation", "advice", "problem"],
+      domain: "rest-api",
+    },
     { keys: ["jpa", "entity", "repository", "hibernate", "flyway", "liquibase"], domain: "data-jpa" },
+    { keys: ["postgres", "sql", "index", "hikari", "migration"], domain: "postgresql" },
     { keys: ["security", "jwt", "oauth", "auth"], domain: "security" },
     { keys: ["test", "mockito", "testcontainers"], domain: "testing" },
-    { keys: ["cache", "perf", "n+1", "async"], domain: "performance" },
+    { keys: ["cache", "perf", "n+1", "async", "pool"], domain: "performance" },
     { keys: ["migrate", "upgrade", "boot3"], domain: "modernization" },
+    { keys: ["git", "branch", "commit"], domain: "git-conventions" },
   ];
 
   for (const entry of map) {
