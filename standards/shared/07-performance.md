@@ -6,7 +6,8 @@
 - Index columns used in filters and joins (coordinate with DBAs).
 
 ## Runtime
-- Size connection pools for real load; do not leave defaults blindly in prod.
+- Size HikariCP (or chosen pool) for real load; set timeouts explicitly per environment.
+- Externalize pool settings in `application-*.yml` — review when concurrency changes.
 - Cache carefully (Spring Cache) with clear TTLs and invalidation.
 - Prefer async / messaging for long-running work; keep request threads short.
 

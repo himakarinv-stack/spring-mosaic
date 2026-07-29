@@ -12,3 +12,7 @@
 | God services / util dumps | Unmaintainable coupling |
 | Catching broad `Exception` and ignoring | Hides bugs |
 | Blocking remote calls inside DB TX | Scalability / lock issues |
+| Entities as OpenAPI models | Couples persistence to public contract |
+| Missing `@ControllerAdvice` with scattered try/catch | Inconsistent API errors |
+| Unindexed FK / filter columns under load | Slow queries / table scans |
+| Hardcoded JDBC URLs / pool secrets | Security + env fragility |
